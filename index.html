@@ -1,0 +1,318 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>pruebas</title>
+    <style>
+      * {
+        padding: 0;
+        margin: 0;
+      }
+      body {
+        width: 100%;
+        height: 100vh; /* Asegura que el cuerpo ocupe toda la altura de la pantalla */       
+        display: flex; /* Centra el contenedor en la pantalla */
+        justify-content: center;
+        align-items: center;
+      }
+      .contenedor1{
+        background-image: url('tenis.jpg');
+        background-size: cover; /* Asegura que la imagen de fondo cubra todo el contenedor */
+        background-position: center; /* Centra la imagen de fondo */
+        display: flex;
+        align-content: center;
+        justify-content: flex-end;
+        width: 100%; /* Asegura que el contenedor ocupe todo el ancho de la pantalla */
+        height: 100vh; /* Asegura que el contenedor ocupe toda la altura de la pantalla */
+      }
+      canvas {  
+        display: block;
+        margin: 0 auto;   
+      }
+    </style>
+  </head>
+  <body>
+    <section class="contenedor1">
+      <canvas id="myCanvas" width="1280" height="600"></canvas>
+    </section>
+    <script>
+      var newFont = new FontFace('Press Start 2P', 'url(https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap)');
+      newFont.load().then(function(loaded_face) {
+      document.fonts.add(loaded_face);
+      }).catch(function(error) {
+      // En caso de error al cargar la fuente
+      console.log('Error al cargar la fuente: ' + error);
+      });
+      var canvas = document.getElementById("myCanvas");
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      var ctx = canvas.getContext("2d");
+      var ballRadius = 10;
+      var x = canvas.width/2;
+      var y = canvas.height-30;
+      var dx = 5;//Velocidad horizontal
+      var dy = -5;//Velocidad vertical
+      var paddleHeight = 75; // Altura de las barras laterales
+      var paddleWidth = 10; // Anchura de las barras laterales
+
+      var palaIzquierda = 
+      {
+        x: 0,
+        y: (canvas.height - paddleHeight) / 2,
+        width: paddleWidth,
+        height: paddleHeight,  
+        color: "red"    
+      };
+
+      var palaDerecha = 
+      {
+        x: canvas.width - paddleWidth,
+        y: (canvas.height - paddleHeight) / 2,
+        width: paddleWidth,
+        height: paddleHeight,  
+        color: "yellow"
+      };
+
+      var upPressed = false;
+      var downPressed = false;
+      var arribaPresionada = false;
+      var abajoPresionada = false;
+
+      var brickRowCount = 5;
+      var brickColumnCount = 2;
+      var brickWidth = 20;//Anchura de los ladrillos
+      var brickHeight = 75;//Altura de los ladrillos
+      var brickPadding = 15;//separacion entre los ladrillos
+      var brickOffsetTop = (canvas.height - brickHeight) / 5; // Centrado verticalmente
+      var brickOffsetLeft = (canvas.width - (brickWidth + brickPadding) * brickColumnCount) / 2; // Centrado horizontalmente
+
+      var scoreLeft = 0; // Puntuación del jugador de la izquierda
+      var scoreRight = 0; // Puntuación del jugador de la derecha
+      
+      var livesLeft = 3; // Vidas del jugador de la izquierda
+      var livesRight = 3; // Vidas del jugador de la derecha
+
+      var scoreSizeLeft = 30; // Tamaño de la fuente de la puntuación del jugador de la izquierda
+      var scoreSizeRight = 30; // Tamaño de la fuente de la puntuación del jugador de la derecha
+      var scoreColorLeft = "white"; // Color de la puntuación del jugador de la izquierda
+      var scoreColorRight = "white";
+      var livesSizeLeft = 30; // Tamaño de la fuente de las vidas del jugador de la izquierda
+      var livesSizeRight = 30; // Tamaño de la fuente de las vidas del jugador de la derecha
+      var livesColorLeft = "white"; // Color de las vidas del jugador de la izquierda
+      var livesColorRight = "white"; // Color de las vidas del jugador de la derecha
+
+      var bricks = [];//Matriz de ladrillos
+        for (c = 0; c < brickColumnCount; c++) 
+        {
+        bricks[c] = [];
+        for (r = 0; r < brickRowCount; r++) 
+        {
+            bricks[c][r] = { x: 0, y: 0, status: 1};
+        }
+        }  
+
+        document.addEventListener("keydown", keyDownHandler, false);
+        document.addEventListener("keyup", keyUpHandler, false);
+
+        function keyDownHandler(e) {
+        if(e.keyCode == 38) { // Flecha arriba
+            upPressed = true;
+        }
+        else if(e.keyCode == 40) { // Flecha abajo
+            downPressed = true;
+        }
+        else if(e.keyCode == 87) { // Tecla 'w'
+            arribaPresionada = true;
+        }
+        else if(e.keyCode == 83) { // Tecla 's'
+            abajoPresionada = true;
+        }
+      }
+
+      function keyUpHandler(e) {
+        if(e.keyCode == 38) {
+            upPressed = false;
+        }
+        else if(e.keyCode == 40) {
+            downPressed = false;
+        }
+        else if(e.keyCode == 87) {
+            arribaPresionada = false;
+        }
+        else if(e.keyCode == 83) {
+            abajoPresionada = false;
+        }
+      }
+
+      function collisionDetection() {
+    for(var c=0; c<brickColumnCount; c++) {
+        for(var r=0; r<brickRowCount; r++) {
+            var b = bricks[c][r];
+            if(b.status == 1) {
+                if(x > b.x && x < b.x+brickWidth && y > b.y && y < b.y+brickHeight) {
+                    dy = -dy;
+                    dx = -dx;
+                    b.status = 0;
+                }
+            }
+        }
+    }
+}
+
+function drawScore() {
+    // Dibuja el fondo con bordes redondeados
+    ctx.beginPath();
+    ctx.fillStyle = "#CCFF00";
+    ctx.roundRect(canvas.width / 2 - 250, 10, 500, 100, 20);
+    ctx.fill();
+
+    // Dibuja el texto de la puntuación
+    ctx.font = scoreSizeLeft + "px 'Press Start 2P'";
+    ctx.fillStyle = scoreColorLeft;
+    ctx.fillText("1º Jugador: " + scoreLeft, canvas.width / 2 - 200, 50);
+    ctx.font = scoreSizeRight + "px 'Press Start 2P'";
+    ctx.fillStyle = scoreColorRight;
+    ctx.fillText("2º Jugador: " + scoreRight, canvas.width / 2 + 50, 50);
+}
+function drawLives() {
+    // Dibuja el texto de las vidas
+    ctx.font = livesSizeLeft + "px 'Press Start 2P'";
+    ctx.fillStyle = livesColorLeft;
+    ctx.fillText("Vidas: " + livesLeft, canvas.width / 2 - 200, 100); // Vidas del jugador de la izquierda
+    ctx.font = livesSizeRight + "px 'Press Start 2P'";
+    ctx.fillStyle = livesColorRight;
+    ctx.fillText("Vidas: " + livesRight, canvas.width / 2 + 50, 100); // Vidas del jugador de la derecha
+}
+
+
+// Añade una función para dibujar rectángulos con bordes redondeados
+CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+    if (w < 2 * r) r = w / 2;
+    if (h < 2 * r) r = h / 2;
+    this.beginPath();
+    this.moveTo(x+r, y);
+    this.arcTo(x+w, y, x+w, y+h, r);
+    this.arcTo(x+w, y+h, x, y+h, r);
+    this.arcTo(x, y+h, x, y, r);
+    this.arcTo(x, y, x+w, y, r);
+    this.closePath();
+    return this;
+}
+
+      function drawBall() 
+      {
+        ctx.beginPath();
+        ctx.arc(x, y, ballRadius, 0, Math.PI * 2);
+        ctx.fillStyle = "#CCFF00";
+        ctx.fill();
+        ctx.closePath(); 
+      }
+      function drawPaddle() 
+      {
+        ctx.beginPath();
+        ctx.rect(palaDerecha.x, palaDerecha.y, palaDerecha.width, palaDerecha.height); // Barra derecha
+        ctx.rect(palaIzquierda.x, palaIzquierda.y, palaIzquierda.width, palaIzquierda.height); // Barra izquierda
+        ctx.fillStyles;
+        ctx.fill();
+        ctx.closePath();
+      }
+
+      function drawBricks() {
+        for (c = 0; c < brickColumnCount; c++) {
+          for (r = 0; r < brickRowCount; r++) {
+            if (bricks[c][r].status == 1) {
+              var brickX = c * (brickWidth + brickPadding) + brickOffsetLeft;
+              var brickY = r * (brickHeight + brickPadding) + brickOffsetTop;
+              bricks[c][r].x = brickX;
+              bricks[c][r].y = brickY;
+              ctx.beginPath();
+              ctx.rect(brickX, brickY, brickWidth, brickHeight);
+              ctx.fillStyle = "white";
+              ctx.fill();
+              ctx.closePath();
+            }
+          }
+        }
+      }
+    function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height); //borra el rastro de la bola antes de dibujarla
+    drawBricks();
+    drawBall();
+    drawPaddle();
+    drawScore();
+    drawLives();
+    collisionDetection();
+
+    if (x + dx > canvas.width - ballRadius) {
+    if (y > palaDerecha.y && y < palaDerecha.y + palaDerecha.height) {
+        dx = -dx;
+    } else {
+        scoreLeft++;
+        livesRight--;
+        dx = -dx;
+        x = canvas.width/2;
+        y = canvas.height/2;
+        scoreSizeLeft = 32; // Aumenta el tamaño de la puntuación del jugador de la izquierda
+        scoreColorLeft = "blue"; // Cambia el color de la puntuación del jugador de la izquierda a azul
+        livesSizeRight = 32; // Aumenta el tamaño de las vidas del jugador de la derecha
+        livesColorRight = "red"; // Cambia el color de las vidas del jugador de la derecha a rojo
+        setTimeout(function() { 
+            scoreSizeLeft = 30; // Restaura el tamaño de la puntuación después de 1 segundo
+            scoreColorLeft = "white"; // Restaura el color de la puntuación después de 1 segundo
+            livesSizeRight = 30; // Restaura el tamaño de las vidas después de 1 segundo
+            livesColorRight = "white"; // Restaura el color de las vidas después de 1 segundo
+        }, 1000); 
+    }
+} else if (x + dx < ballRadius) {
+    if (y > palaIzquierda.y && y < palaIzquierda.y + palaIzquierda.height) {
+        dx = -dx;
+    } else {
+        scoreRight++;
+        livesLeft--;
+        dx = -dx;
+        x = canvas.width/2;
+        y = canvas.height/2;
+        scoreSizeRight = 32; // Aumenta el tamaño de la puntuación del jugador de la derecha
+        scoreColorRight = "blue"; // Cambia el color de la puntuación del jugador de la derecha a azul
+        livesSizeLeft = 32; // Aumenta el tamaño de las vidas del jugador de la izquierda
+        livesColorLeft = "red"; // Cambia el color de las vidas del jugador de la izquierda a rojo
+        setTimeout(function() { 
+            scoreSizeRight = 30; // Restaura el tamaño de la puntuación después de 1 segundo
+            scoreColorRight = "white"; // Restaura el color de la puntuación después de 1 segundo
+            livesSizeLeft = 30; // Restaura el tamaño de las vidas después de 1 segundo
+            livesColorLeft = "white"; // Restaura el color de las vidas después de 1 segundo
+        }, 1000); 
+    }
+}
+
+    if (y + dy > canvas.height - ballRadius || y + dy < ballRadius) {
+        dy = -dy;
+    }
+
+    if (upPressed && palaDerecha.y > 0) {
+        palaDerecha.y -= 7;
+    } else if (downPressed && palaDerecha.y < canvas.height - palaDerecha.height) {
+        palaDerecha.y += 7;
+    }
+
+    if (arribaPresionada && palaIzquierda.y > 0) {
+        palaIzquierda.y -= 7;
+    } else if (abajoPresionada && palaIzquierda.y < canvas.height - palaIzquierda.height) {
+        palaIzquierda.y += 7;
+    }
+
+    if (livesLeft <= 0) {
+            alert("¡Ha ganado el 2º jugador!");
+            document.location.reload();
+        } else if (livesRight <= 0) {
+            alert("¡Ha ganado el 1º jugador!");
+            document.location.reload();
+        }
+    x += dx; //incrementa la direccion de la bola
+    y += dy; //incrementa la direccion de la bola
+    requestAnimationFrame(draw); //en lugar de hacerlo cada 10 milisegundos, dejamos que sea el navegador quien decida cada cuánto tiempo. El navegador sincronizará el refresco, es decir, el número de fotogramas por segundo
+}
+draw(); 
+    </script>
+  </body>
+</html>
